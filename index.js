@@ -2,7 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-
+require('dotenv').config()
 
 
 
@@ -36,10 +36,20 @@ server.get('/', ( request, response ) => {
 
 
 
+// make URL public
+server.use('/uploads/categories', express.static('uploads/categories'));
+server.use('/uploads/sub-categories', express.static('uploads/sub-categories'));
+server.use('/uploads/products', express.static('uploads/products'));
+
+
+
 
 // Admin API URLs
 require('./src/routes/admin/color.routes.js')(server);
 require('./src/routes/admin/material.routes.js')(server);
+require('./src/routes/admin/countries.routes.js')(server);
+require('./src/routes/admin/categories.routes.js')(server);
+require('./src/routes/admin/subCategories.routes.js')(server);
 
 
 
@@ -55,10 +65,12 @@ require('./src/routes/admin/material.routes.js')(server);
 
 
 
-server.listen(8000, () => {
+// server.listen(8000, () => {
+server.listen(process.env.PORT, () => {
     console.log("Server Running...");
 
-    mongoose.connect('mongodb://127.0.0.1:27017/monsta-ecom')
+    // mongoose.connect('mongodb://127.0.0.1:27017/monsta-ecom')
+    mongoose.connect(process.env.DB)
         .then((res) => {
             // console.log(res);
             console.log('DB Connected!');
