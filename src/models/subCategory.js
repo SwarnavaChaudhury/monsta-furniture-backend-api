@@ -13,6 +13,13 @@ const subCategorySchema = new mongoose.Schema({
         required: [true, 'Parent Category is required'],
         ref: 'categories', // add reference parent table name
     },
+    product_ids: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'products',
+            default: [],
+        }
+    ],
     image: {
         type: String,
         default: '',

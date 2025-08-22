@@ -1,27 +1,25 @@
 const mongoose = require('mongoose');
 
-const categorySchema = new mongoose.Schema({
+const subSubCategorySchema = new mongoose.Schema({
     name: {
         type: String,
         required: [true, 'Name is required'],
         match: /^[a-zA-Z0-9\- ]{2,30}$/,
         // minLength: [3, 'Minimum length must be 3 character'],
         // maxLength: [15, 'Maximum length must be 15 character'],
-        validate: {
-            validator: async function (v) {
-                const name = await this.constructor.findOne({ name: v });
-                return !name;
-            },
-            message: props => `The specified name is already in use.`
-        }
     },
-    image: {
-        type: String,
-        default: '',
+    parent_category_id: {
+        // type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        required: [true, 'Parent Category is required'],
+        ref: 'categories', // add reference parent table name
     },
-    slug: {
-        type: String,
-        default: '',
+    child_category_id: {
+        // type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        // But in Mongoose, if we want to use population (.populate()), should be store them as ObjectId
+        required: [true, 'Child Category is required'],
+        ref: 'sub_categories', // add reference parent table name
     },
     product_ids: [
         {
@@ -30,6 +28,10 @@ const categorySchema = new mongoose.Schema({
             default: [],
         }
     ],
+    image: {
+        type: String,
+        default: '',
+    },
     order: {
         type: Number,
         default: 0,
@@ -50,10 +52,10 @@ const categorySchema = new mongoose.Schema({
     },
     deleted_at: {
         type: Date,
-        default: '',
+        default: null,
     },
 });
 
-const categoryModel = mongoose.model('categories', categorySchema);
+const subSubCategoryModel = mongoose.model('sub_sub_categories', subSubCategorySchema);
 
-module.exports = categoryModel;
+module.exports = subSubCategoryModel;

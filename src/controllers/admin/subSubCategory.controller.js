@@ -1,44 +1,11 @@
 // all functions will declared here
 require('dotenv').config()
 
-
-const fs = require('fs');
-const path = require('path');
-
-
 // console.log(process.env)
 
-const categoryModel = require("../../models/Category");
-
-var slugify = require('slugify');
-
-
-
-const generateUniqueSlug = async (modal, slug) => {
-
-    let count = 0;
-    var actualSlug = slug;
-
-    // while loop run until slug found in database
-    while (await modal.findOne({slug: actualSlug})) {
-        count++;
-        actualSlug = `${slug}-${count}`;
-    }
-
-    return actualSlug;
-}
-
-
-
-
+const subSubCategoryModel = require("../../models/subSubCategory");
 
 exports.create = async (request, response) => {
-
-
-    // console.log(request.file); // for handling single file
-    // console.log(request.file.filename);
-    // console.log(request.files); // for handling multiple files
-
 
 
     const saveData = request.body;
@@ -47,22 +14,9 @@ exports.create = async (request, response) => {
     }
 
 
-    var slug = slugify(request.body.name, {
-        replacement: '-',  // replace spaces with replacement character, defaults to `-`
-        remove: undefined, // remove characters that match regex, defaults to `undefined`
-        lower: true,      // convert to lower case, defaults to `false`
-        strict: true,     // strip special characters except replacement, defaults to `false`
-        locale: 'vi',      // language code of the locale to use
-        trim: true         // trim leading and trailing replacement chars, defaults to `true`
-    });
-    saveData.slug = await generateUniqueSlug(categoryModel, slug);
-
-
-
     try {
 
-        // const insertData = new categoryModel(request.body);
-        const insertData = new categoryModel(saveData);
+        const insertData = new subSubCategoryModel(saveData);
 
         await insertData.save()
             .then((result) => {
@@ -102,7 +56,7 @@ exports.create = async (request, response) => {
 
         const output = {
             _status: false,
-            _message: 'Category validation failed!',
+            _message: 'Sub Sub-Category validation failed!',
             _data: null
         }
         response.send(output);
@@ -111,8 +65,6 @@ exports.create = async (request, response) => {
 }
 
 exports.view = async (request, response) => {
-
-
 
 
     const addCondition = [
@@ -129,11 +81,26 @@ exports.view = async (request, response) => {
                 var name = new RegExp(request.body.name, 'i');
                 orCondition.push({
                     name: name
-                }, {
-                    code: name
                 })
             }
         }
+
+        if (request.body.parent_category_id != undefined) {
+            if (request.body.parent_category_id != '') {
+                addCondition.push({
+                    parent_category_id: request.body.parent_category_id
+                })
+            }
+        }
+
+        if (request.body.child_category_id != undefined) {
+            if (request.body.child_category_id != '') {
+                addCondition.push({
+                    child_category_id: request.body.child_category_id
+                })
+            }
+        }
+
     }
 
     if (addCondition.length > 0) {
@@ -155,17 +122,17 @@ exports.view = async (request, response) => {
     // pagination
 
     var current_page = 1;
-    var limit = 10;
+    var limit = 5;
     var skip = (current_page - 1) * limit;
 
     if (request.body != undefined) {
         var current_page = request.body.page ? request.body.page : current_page;
-        var limit = request.body.limit ? request.body.limit : current_page;
+        var limit = request.body.limit ? request.body.limit : 5;
         var skip = (current_page - 1) * limit;
     }
 
     // show total number of rows available in table
-    let totalRecords = await categoryModel.find(filter).countDocuments();
+    let totalRecords = await subSubCategoryModel.find(filter).countDocuments();
     let total_pages = Math.ceil(totalRecords / limit);
 
 
@@ -174,7 +141,10 @@ exports.view = async (request, response) => {
 
 
 
-    await categoryModel.find(filter)
+    await subSubCategoryModel.find(filter)
+        .select('_id name image order status')
+        .populate('parent_category_id', "name")
+        .populate('child_category_id', "name")
         .limit(limit).skip(skip)
         // .sort({
         //     order: 'asc'
@@ -192,8 +162,7 @@ exports.view = async (request, response) => {
                         total_pages: total_pages,
                         total_records: totalRecords
                     },
-                    // _image_path: 'http://localhost:8000/uploads/categories/',
-                    _image_path: process.env.category_image,
+                    _image_path: process.env.sub_sub_category_image,
                     _data: result
                 }
                 response.send(output);
@@ -219,13 +188,13 @@ exports.view = async (request, response) => {
 
 exports.details = async (request, response) => {
 
-    await categoryModel.findById(request.body.id)
+    await subSubCategoryModel.findById(request.body.id)
         .then((result) => {
             if (result) {
                 const output = {
                     _status: true,
                     _message: 'Record Found!',
-                    _image_path: process.env.category_image,
+                    _image_path: process.env.sub_sub_category_image,
                     _data: result
                 }
                 response.send(output);
@@ -251,58 +220,14 @@ exports.details = async (request, response) => {
 
 exports.update = async (request, response) => {
 
-
-
-    const cate_id = request.params.id;
-
-    const existingCategory = await categoryModel.findById(cate_id);
-
-    // if category not exist
-    if (!existingCategory) {
-        return response.send({
-            _status: false,
-            _message: 'Category not found!',
-            _data: null
-        });
-    }
-
-
-
-
-
     ///////////////////////////////////////
     const saveData = request.body;
     if (request.file) {
         saveData.image = request.file.filename;
-
-
-
-
-
-
-        // Build real folder path from your .env (URL → folder)
-        let imageBasePath = process.env.category_image || '';
-        imageBasePath = imageBasePath.replace(/^http:\/\/[^\/]+/, ''); // gives `/uploads/categories/`
-
-        // Convert to absolute path from project root
-        const oldImagePath = path.join(process.cwd(), imageBasePath, existingCategory.image);
-
-        // console.log("Deleting: ", oldImagePath);
-
-        if (existingCategory.image && fs.existsSync(oldImagePath)) {
-            fs.unlinkSync(oldImagePath);
-            // console.log("Old image deleted");
-        } else {
-            // console.log("File not found:", oldImagePath);
-        }
     }
     ///////////////////////////////////////
 
-
-
-
-
-    await categoryModel.updateOne({
+    await subSubCategoryModel.updateOne({
         _id: request.params.id
     }, {
         // $set: request.body
@@ -342,7 +267,7 @@ exports.changeStatus = async (request, response) => {
         }
 
         // return an array of object contains full data of correspond ids
-        const categories = await categoryModel.find({ _id: { $in: ids } });
+        const categories = await subSubCategoryModel.find({ _id: { $in: ids } });
 
         // if id is received but those ids are invalid
         if (!categories.length) {
@@ -355,7 +280,7 @@ exports.changeStatus = async (request, response) => {
 
         // update status of those ids one by one
         const updatePromises = categories.map(category =>
-            categoryModel.updateOne({
+            subSubCategoryModel.updateOne({
                 _id: category._id
             }, {
                 $set: {
@@ -383,10 +308,9 @@ exports.changeStatus = async (request, response) => {
     }
 }
 
-
 exports.destroy = async (request, response) => {
 
-    await categoryModel.updateMany({
+    await subSubCategoryModel.updateMany({
         _id: {
             $in: request.body.id
             // accept array
