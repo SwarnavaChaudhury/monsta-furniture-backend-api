@@ -4,9 +4,9 @@ const productSchema = new mongoose.Schema({
     name: {
         type: String,
         required: [true, 'Name is required'],
-        match: /^[a-zA-Z0-9\- ]{2,30}$/,
-        // minLength: [3, 'Minimum length must be 3 character'],
-        // maxLength: [15, 'Maximum length must be 15 character'],
+        // match: /^[a-zA-Z0-9\- ]{2,30}$/,
+        minLength: [3, 'Minimum length must be 3 character'],
+        maxLength: [100, 'Maximum length must be 100 character'],
         // validate: {
         //     validator: async function (v) {
         //         const name = await this.constructor.findOne({ name: v });
@@ -27,10 +27,16 @@ const productSchema = new mongoose.Schema({
         type: String,
         default: '',
     },
-    image_gallery: {
-        type: Array, // Array of strings to store multiple image URLs
-        default: [],
-    },
+    // image_gallery: {
+    //     type: Array, // Array of strings to store multiple image URLs
+    //     default: [],
+    // },
+    image_gallery: [
+        {
+            type: String
+        }
+    ],
+
 
 
 
@@ -46,13 +52,13 @@ const productSchema = new mongoose.Schema({
         type: Number,
         required: [true, 'Actual price is required'],
         min: [0, 'Minimum value must be greater than 0'],
-        max: [100000, 'Maximum value must be less than 100000'],
+        max: [1000000, 'Maximum value must be less than 100000'],
     },
     selling_price: {
         type: Number,
         required: [true, 'Selling price is required'],
         min: [0, 'Minimum value must be greater than 0'],
-        max: [100000, 'Maximum value must be less than 100000'],
+        max: [1000000, 'Maximum value must be less than 100000'],
     },
     parent_category_ids: [
         {
@@ -106,6 +112,10 @@ const productSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    is_top_rated: {
+        type: Boolean,
+        default: false,
+    },
     is_upsale: {
         type: Boolean,
         default: false,
@@ -136,15 +146,18 @@ const productSchema = new mongoose.Schema({
     short_description: {
         type: String,
         required: [true, 'Short description is required'],
-        match: /^[a-zA-Z0-9\-., ]{10,100}$/,
+        // match: /^[a-zA-Z0-9\-., ]{10,100}$/,
         // minLength: [10, 'Minimum length must be 10 character'],
         // maxLength: [100, 'Maximum length must be 100 character'],
+        minlength: 10,
+        maxlength: 2000,
+        trim: true,
         default: '',
     },
-    description: {
+    long_description: {
         type: String,
         required: [true, 'Description is required'],
-        match: /^[a-zA-Z0-9\-., ]{10,500}$/,
+        // match: /^[a-zA-Z0-9\-., ]{10,500}$/,
         // minLength: [10, 'Minimum length must be 10 character'],
         // maxLength: [500, 'Maximum length must be 500 character'],
         default: '',
@@ -161,7 +174,7 @@ const productSchema = new mongoose.Schema({
         maxlength: [20, 'Maximum length must be 20 character'],
         default: '',
     },
-    stock: {
+    total_stocks: {
         type: Number,
         // required: [true, 'Stock is required'],
         min: [0, 'Minimum value must be greater than 0'],
@@ -198,11 +211,11 @@ const productSchema = new mongoose.Schema({
     },
     created_at: {
         type: Date,
-        default: Date.now(),
+        default: Date.now,
     },
     updated_at: {
         type: Date,
-        default: Date.now(),
+        default: Date.now,
     },
     deleted_at: {
         type: Date,

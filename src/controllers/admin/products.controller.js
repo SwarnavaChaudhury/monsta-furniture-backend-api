@@ -186,11 +186,46 @@ exports.view = async (request, response) => {
                 var name = new RegExp(request.body.name, 'i');
                 orCondition.push({
                     name: name
-                }, {
-                    code: name
                 })
             }
         }
+
+
+
+        // parent category filter
+        if (request.body.parent_category_id && request.body.parent_category_id !== '') {
+            addCondition.push({
+                parent_category_ids: { $in: [request.body.parent_category_id] }
+            });
+        }
+
+        // sub-category filter
+        if (request.body.child_category_id && request.body.child_category_id !== '') {
+            addCondition.push({
+                sub_category_ids: { $in: [request.body.child_category_id] }
+            });
+        }
+
+        // sub-sub-category filter
+        if (request.body.sub_child_category_id && request.body.sub_child_category_id !== '') {
+            addCondition.push({
+                sub_sub_category_ids: { $in: [request.body.sub_child_category_id] }
+            });
+        }
+
+        // material filter
+        if (request.body.material_id && request.body.material_id !== '') {
+            addCondition.push({
+                material_ids: { $in: [request.body.material_id] }
+            });
+        }
+        // color filter
+        if (request.body.color_id && request.body.color_id !== '') {
+            addCondition.push({
+                color_ids: { $in: [request.body.color_id] }
+            });
+        }
+
     }
 
     if (addCondition.length > 0) {
@@ -212,12 +247,12 @@ exports.view = async (request, response) => {
     // pagination
 
     var current_page = 1;
-    var limit = 10;
+    var limit = 5;
     var skip = (current_page - 1) * limit;
 
     if (request.body != undefined) {
         var current_page = request.body.page ? request.body.page : current_page;
-        var limit = request.body.limit ? request.body.limit : current_page;
+        var limit = request.body.limit ? request.body.limit : 5;
         var skip = (current_page - 1) * limit;
     }
 
@@ -255,7 +290,7 @@ exports.view = async (request, response) => {
                         total_records: totalRecords
                     },
                     // _image_path: 'http://localhost:8000/uploads/categories/',
-                    _image_path: process.env.product_image,
+                    _image_path: process.env.main_domain + process.env.product_image,
                     _data: result
                 }
                 response.send(output);
@@ -289,7 +324,7 @@ exports.details = async (request, response) => {
                 const output = {
                     _status: true,
                     _message: 'Record Found!',
-                    _image_path: process.env.product_image,
+                    _image_path: process.env.main_domain + process.env.product_image,
                     _data: result
                 }
                 response.send(output);
@@ -327,7 +362,7 @@ exports.productDetails = async (request, response) => {
                 const output = {
                     _status: true,
                     _message: 'Record Found!',
-                    _image_path: process.env.product_image,
+                    _image_path: process.env.main_domain + process.env.product_image,
                     _data: result
                 }
                 response.send(output);
@@ -367,6 +402,9 @@ exports.update = async (request, response) => {
         });
     }
 
+    // console.log(existingProduct);
+    // return;
+
     const saveData = request.body;
 
 
@@ -402,18 +440,74 @@ exports.update = async (request, response) => {
         }
 
         // IMAGE GALLERY (replace entire array)
-        if (request.files.image_gallery) {
-            // delete old gallery images
-            if (Array.isArray(existingProduct.image_gallery)) {
-                existingProduct.image_gallery.forEach(img => {
-                    const oldPath = path.join(process.env.product_image, img);
-                    if (fs.existsSync(oldPath)) {
-                        fs.unlinkSync(oldPath)
-                    }
-                });
+        // if (request.files.image_gallery) {
+        //     // delete old gallery images
+        //     if (Array.isArray(existingProduct.image_gallery)) {
+        //         existingProduct.image_gallery.forEach(img => {
+        //             const oldPath = path.join(process.env.product_image, img);
+        //             if (fs.existsSync(oldPath)) {
+        //                 fs.unlinkSync(oldPath)
+        //             }
+        //         });
+        //     }
+        //     saveData.image_gallery = request.files.image_gallery.map(file => file.filename);
+        // }
+
+
+
+
+        // console.log('Existing Gallery:', existingProduct.image_gallery); // return array
+        // console.log('new uploads:', request.files.image_gallery);
+        // console.log('Kept old from body:', request.body.old_gallery_img); // return comma separated string
+        // return;
+
+
+        // IMAGE GALLERY (merge old + new, delete only removed ones)
+        if (request.files.image_gallery || request.body.old_gallery_img !== undefined) {
+            let finalGallery = [];
+
+            // 1. Convert into array by comma separated values from old_gallery_img
+            let keptOldImages = [];
+            if (request.body.old_gallery_img) {
+                keptOldImages = request.body.old_gallery_img.split(",").map(img => img.trim()).filter(Boolean);
             }
-            saveData.image_gallery = request.files.image_gallery.map(file => file.filename);
+
+            console.log("Existing Gallery:", existingProduct.image_gallery); // array from DB
+            console.log("New Uploads:", request.files.image_gallery ? request.files.image_gallery.map(f => f.filename) : []);
+            console.log("Kept Old From Body:", keptOldImages);
+
+            // 2. Find old images that user removed (present in DB but not in keptOldImages)
+            const removedImages = existingProduct.image_gallery.filter(
+                img => !keptOldImages.includes(img)
+            );
+
+            // 3. Delete unwanted images from server folder
+            removedImages.forEach(img => {
+                const oldPath = path.join(process.env.product_image, img);
+                if (fs.existsSync(oldPath)) {
+                    fs.unlinkSync(oldPath);
+                    console.log("Deleted from server:", img);
+                }
+            });
+
+            // 4. Push kept old images into final array
+            finalGallery = [...keptOldImages];
+
+            // 5. Push newly uploaded images into final array
+            if (request.files.image_gallery) {
+                const newUploads = request.files.image_gallery.map(file => file.filename);
+                finalGallery.push(...newUploads);
+            }
+
+            // 6. Assign final array to saveData for saving in DB
+            saveData.image_gallery = finalGallery;
         }
+
+
+
+
+
+
     }
 
     // -------------------------------

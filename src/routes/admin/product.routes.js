@@ -52,8 +52,10 @@ module.exports = server => {
 
     router.post('/view', upload.none(), view);
 
+    // RETURNS ONLY IDS
     router.post('/details', upload.none(), details);
 
+    // RETURNS ALL REF DETAILS
     router.post('/product-details', upload.none(), productDetails);
 
     router.put('/update/:id', singleMultiple, update);
