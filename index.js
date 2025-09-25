@@ -53,13 +53,14 @@ require('./src/routes/admin/categories.routes.js')(server);
 require('./src/routes/admin/subCategories.routes.js')(server);
 require('./src/routes/admin/subSubCategories.routes.js')(server);
 require('./src/routes/admin/product.routes.js')(server);
+require('./src/routes/admin/user.routes.js')(server);
 
 require('./src/routes/admin/statusCheck.routes.js')(server);
 
 
 
 // Website API URLs
-
+require('./src/routes/website/user.routes.js')(server);
 
 
 
